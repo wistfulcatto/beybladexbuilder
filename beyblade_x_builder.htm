@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Beyblade Builder</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .page-wrapper {
+      max-width: 1200px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .builder {
+      flex: 1;
+      min-width: 300px;
+      border: 1px solid #ccc;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    select {
+      width: 100%;
+      margin: 10px 0;
+      padding: 5px;
+    }
+
+    .stat-label {
+      font-weight: bold;
+    }
+
+    .stat-value {
+      margin-left: 10px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .stat-box {
+      border: 1px solid #ccc;
+      padding-top: 0px;
+      padding-right: 10px;
+      padding-bottom: 10px;
+      padding-left: 10px;
+      border-radius: 10px;
+    }
+
+    .stat-label.burst-resistance {
+      text-transform: capitalize;
+    }
+
+    .chart-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center; /* Center the radar chart vertically */
+      width: 100%;
+      margin-top: 0; /* Remove margin to align directly next to builders */
+      flex: 1;
+      min-width: 300px; /* Optional: Ensure the chart stays at a reasonable size */
+    }
+    
+
+    canvas {
+      max-width: 700px; /* size of the radar chart */
+      width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <h1>Beyblade X Builder</h1>
+    <div class="container">
+      <div class="builder" id="builder1">
+        <h2>Build 1</h2>
+        <select id="blade1" onchange="updateStats(1)"></select>
+        <select id="ratchet1" onchange="updateStats(1)"></select>
+        <select id="bit1" onchange="updateStats(1)"></select>
+        <div class="stat-box">
+          <div class="stats" id="stats1"></div>
+        </div>
+      </div>
+      <div class="builder" id="builder2">
+        <h2>Build 2</h2>
+        <select id="blade2" onchange="updateStats(2)"></select>
+        <select id="ratchet2" onchange="updateStats(2)"></select>
+        <select id="bit2" onchange="updateStats(2)"></select>
+        <div class="stat-box">
+          <div class="stats" id="stats2"></div>
+        </div>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="radarChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const blades = {
+  "AeroPegasus": { weight: 38.3, attack: 70, defense: 30, stamina: 35 },
+  "BiteCroc": { weight: 34.1, attack: 60, defense: 22, stamina: 18 },
+  "BlackShell": { weight: 32.1, attack: 10, defense: 65, stamina: 25 },
+  "CobaltDragoon": { weight: 38, attack: 60, defense: 15, stamina: 25 },
+  "CobaltDrake": { weight: 37.8, attack: 70, defense: 35, stamina: 25 },
+  "CrimsonGaruda": { weight: 35, attack: 40, defense: 25, stamina: 30 },
+  "DracielShield": { weight: 28, attack: 30, defense: 50, stamina: 20 },
+  "DragoonStorm": { weight: 25.1, attack: 55, defense: 30, stamina: 15 },
+  "DranBuster": { weight: 36.7, attack: 70, defense: 20, stamina: 10 },
+  "DranDagger": { weight: 34.7, attack: 50, defense: 25, stamina: 25 },
+  "DranSword": { weight: 34.6, attack: 55, defense: 25, stamina: 20 },
+  "DranzerSpiral": { weight: 27.7, attack: 35, defense: 30, stamina: 35 },
+  "DrigerSlash": { weight: 28.6, attack: 40, defense: 35, stamina: 25 },
+  "GhostCircle": { weight: 26, attack: 5, defense: 40, stamina: 55 },
+  "GolemRock": { weight: 34, attack: 30, defense: 60, stamina: 10 },
+  "HellsChain": { weight: 33.2, attack: 35, defense: 40, stamina: 25 },
+  "HellsHammer": { weight: 33, attack: 50, defense: 25, stamina: 25 },
+  "HellsScythe": { weight: 32.9, attack: 30, defense: 35, stamina: 35 },
+  "Hover Wyvern": { weight: 35, attack: 13, defense: 60, stamina: 27 },
+  "ImpactDrake": { weight: 39, attack: 75, defense: 25, stamina: 10 },
+  "KnifeShinobi": { weight: 30.9, attack: 23, defense: 50, stamina: 27 },
+  "KnightLance": { weight: 32.9, attack: 25, defense: 60, stamina: 15 },
+  "KnightMail": { weight: 36.5, attack: 10, defense: 65, stamina: 35 },
+  "KnightShield": { weight: 32.4, attack: 20, defense: 55, stamina: 25 },
+  "LeonClaw": { weight: 31.4, attack: 40, defense: 40, stamina: 20 },
+  "LeonCrest": { weight: 35, attack: 15, defense: 70, stamina: 15 },
+  "Lightning L-Drago (Rapid-Hit Type)": { weight: 33, attack: 50, defense: 30, stamina: 20 },
+  "Lightning L-Drago (Upper Type)": { weight: 33.5, attack: 55, defense: 25, stamina: 20 },
+  "PhoenixFeather": { weight: 33.3, attack: 50, defense: 20, stamina: 30 },
+  "PhoenixRudder": { weight: 34.5, attack: 10, defense: 35, stamina: 55 },
+  "PhoenixWing": { weight: 38, attack: 65, defense: 30, stamina: 20 },
+  "RhinoHorn": { weight: 33, attack: 20, defense: 50, stamina: 30 },
+  "Roar Tyranno": { weight: 36, attack: 60, defense: 28, stamina: 12 },
+  "SamuraiSaber": { weight: 36.5, attack: 65, defense: 20, stamina: 25 },
+  "Savage Bear": { weight: 29.9, attack: 25, defense: 35, stamina: 40 },
+  //to update, data incomplete "ScorpioSpear": { weight: null, attack: 25, defense: 55, stamina: 30 },
+  "SharkEdge": { weight: 34.5, attack: 60, defense: 25, stamina: 15 },
+  "ShelterDrake": { weight: 32.6, attack: 25, defense: 40, stamina: 35 },
+  "ShinobiShadow": { weight: 28.2, attack: 10, defense: 70, stamina: 20 },
+  "SilverWolf": { weight: 36.6, attack: 15, defense: 30, stamina: 65 },
+  "SphinxCowl": { weight: 32.5, attack: 35, defense: 55, stamina: 10 },
+  "Steel Samurai": { weight: 31.2, attack: 40, defense: 37, stamina: 23 },
+  "StormPegasis": { weight: 31, attack: 55, defense: 15, stamina: 30 },
+  "Talon Ptera": { weight: 34.3, attack: 27, defense: 23, stamina: 30 },
+  "Tusk Mammoth": { weight: 32, attack: 38, defense: 40, stamina: 37 },
+  "TyrannoBeat": { weight: 37, attack: 65, defense: 30, stamina: 5 },
+  "UnicornSting": { weight: 33.4, attack: 35, defense: 35, stamina: 30 },
+  "VictoryValkyrie": { weight: 33.2, attack: 55, defense: 20, stamina: 25 },
+  "ViperTail": { weight: 34.7, attack: 30, defense: 20, stamina: 50 },
+  "WeissTiger": { weight: 34.6, attack: 45, defense: 30, stamina: 25 },
+  "WhaleWave": { weight: 38, attack: 45, defense: 35, stamina: 20 },
+  "WizardArrow": { weight: 31.8, attack: 15, defense: 30, stamina: 55 },
+  "WizardRod": { weight: 35.3, attack: 15, defense: 25, stamina: 60 },
+  "WyvernGale": { weight: 31.9, attack: 10, defense: 40, stamina: 50 },
+  //to update, data incomplete "XenoXcalibur": { weight: 31, attack: null, defense: null, stamina: null },
+  "Yell Kong": { weight: 31.1, attack: 13, defense: 37, stamina: 50 }
+};
+
+
+    const ratchets = {
+  "0-80": { weight: 7.6, attack: 3, defense: 12, stamina: 15 },
+  "1-60": { weight: 6, attack: 17, defense: 9, stamina: 4 },
+  "1-80": { weight: 6.1, attack: 17, defense: 4, stamina: 9 },
+  "2-60": { weight: 6.2, attack: 16, defense: 8, stamina: 6 },
+  "2-70": { weight: 6.3, attack: 10, defense: 12, stamina: 8 },
+  "2-80": { weight: 6.3, attack: 10, defense: 11, stamina: 9 },
+  "3-60": { weight: 6.4, attack: 15, defense: 9, stamina: 6 },
+  "3-70": { weight: 6.4, attack: 15, defense: 8, stamina: 7 },
+  "3-80": { weight: 7.1, attack: 15, defense: 7, stamina: 8 },
+  "3-85": { weight: 4.6, attack: 5, defense: 15, stamina: 10 },
+  "4-55": { weight: 4.8, attack: 7, defense: 11, stamina: 12 },
+  "4-60": { weight: 6.4, attack: 11, defense: 13, stamina: 6 },
+  "4-70": { weight: 6.6, attack: 11, defense: 12, stamina: 7 },
+  "4-80": { weight: 7, attack: 11, defense: 11, stamina: 8 },
+  "5-60": { weight: 6.6, attack: 12, defense: 9, stamina: 9 },
+  "5-70": { weight: 6.6, attack: 12, defense: 8.5, stamina: 9.5 },
+  "5-80": { weight: 7.2, attack: 12, defense: 8, stamina: 10 },
+  "6-60": { weight: 6.1, attack: 14, defense: 8, stamina: 8 },
+  "6-80": { weight: 6.9, attack: 14, defense: 6, stamina: 10 },
+  "7-60": { weight: 7.1, attack: 8, defense: 14, stamina: 8 },
+  "7-70": { weight: 7.2, attack: 8, defense: 12, stamina: 10 },
+  "7-80": { weight: 7.3, attack: 7, defense: 14, stamina: 9 },
+  "9-60": { weight: 6.2, attack: 13, defense: 10, stamina: 7 },
+  "9-70": { weight: 6.5, attack: 13, defense: 10, stamina: 7 },
+  "9-80": { weight: 6.8, attack: 13, defense: 10, stamina: 7 }
+};
+
+
+    const bits = {
+  "Accel": { weight: 2.6, attack: 40, defense: 10, stamina: 10, dash: 40, burstResistance: 80 },
+  "Ball": { weight: 2.1, attack: 15, defense: 25, stamina: 50, dash: 10, burstResistance: 30 },
+  "Bound Spike": { weight: 2, attack: 10, defense: 45, stamina: 35, dash: 10, burstResistance: 30 },
+  "Cyclone": { weight: 2.4, attack: 40, defense: 5, stamina: 10, dash: 45, burstResistance: 80 },
+  "Disk Ball": { weight: 3.2, attack: 15, defense: 20, stamina: 55, dash: 10, burstResistance: 30 },
+  "Dot": { weight: 2.5, attack: 10, defense: 55, stamina: 25, dash: 10, burstResistance: 30 },
+  "Elevate": { weight: 3.2, attack: 30, defense: 15, stamina: 20, dash: 35, burstResistance: 30 },
+  "Flat": { weight: 2.3, attack: 40, defense: 15, stamina: 10, dash: 35, burstResistance: 80 },
+  "Free Ball": { weight: 2.2, attack: 10, defense: 25, stamina: 60, dash: 5, burstResistance: 30 },
+  "Gear Ball": { weight: 2.1, attack: 10, defense: 15, stamina: 45, dash: 30, burstResistance: 30 },
+  "Gear Flat": { weight: 2.1, attack: 50, defense: 5, stamina: 5, dash: 40, burstResistance: 80 },
+  "Gear Needle": { weight: 2.2, attack: 20, defense: 40, stamina: 10, dash: 30, burstResistance: 30 },
+  "Gear Point": { weight: 2.3, attack: 30, defense: 25, stamina: 15, dash: 30, burstResistance: 80 },
+  //to update, data incomplete "Gear Rush": { weight: null, attack: 45, defense: 10, stamina: 10, dash: 35, burstResistance: 80 },
+  "Glide": { weight: 2.3, attack: 20, defense: 10, stamina: 55, dash: 15, burstResistance: 30 },
+  "Hexa": { weight: 2.6, attack: 30, defense: 35, stamina: 20, dash: 15, burstResistance: 80 },
+  "High Needle": { weight: 2.2, attack: 15, defense: 55, stamina: 20, dash: 10, burstResistance: 30 },
+  "High Taper": { weight: 2.2, attack: 30, defense: 25, stamina: 20, dash: 25, burstResistance: 80 },
+  //to update, data incomplete "Kick": { weight: null, attack: null, defense: null, stamina: null, dash: null, burstResistance: null },
+  "Level": { weight: 2.7, attack: 40, defense: 5, stamina: 15, dash: 40, burstResistance: 80 },
+  "Low Flat": { weight: 2.1, attack: 45, defense: 5, stamina: 10, dash: 40, burstResistance: 80 },
+  //to update, data incomplete "Low Orb": { weight: null, attack: 5, defense: 25, stamina: 55, dash: 15, burstResistance: 30 },
+  "Low Rush": { weight: 1.9, attack: 45, defense: 5, stamina: 15, dash: 35, burstResistance: 80 },
+  "Metal Needle": { weight: 2.4, attack: 8, defense: 57, stamina: 30, dash: 5, burstResistance: 30 },
+  "Needle": { weight: 2, attack: 10, defense: 50, stamina: 30, dash: 10, burstResistance: 30 },
+  "Orb": { weight: 2.1, attack: 10, defense: 30, stamina: 50, dash: 10, burstResistance: 30 },
+  "Point": { weight: 2.2, attack: 25, defense: 25, stamina: 25, dash: 25, burstResistance: 80 },
+  "Quake": { weight: 2.2, attack: 55, defense: 15, stamina: 5, dash: 25, burstResistance: 80 },
+  "Rubber Accel": { weight: 3.1, attack: 60, defense: 17, stamina: 3, dash: 20, burstResistance: 80 },
+  "Rush": { weight: 2.2, attack: 40, defense: 10, stamina: 20, dash: 30, burstResistance: 80 },
+  "Spike": { weight: 2.2, attack: 10, defense: 45, stamina: 35, dash: 10, burstResistance: 30 },
+  "Taper": { weight: 2.2, attack: 35, defense: 20, stamina: 20, dash: 25, burstResistance: 80 },
+  "Trans Point": { weight: 2.4, attack: 30, defense: 25, stamina: 15, dash: 30, burstResistance: 80 },
+  "Under Needle": { weight: 2, attack: 10, defense: 60, stamina: 20, dash: 10, burstResistance: 30 },
+  "Unite": { weight: 2.6, attack: 25, defense: 25, stamina: 30, dash: 20, burstResistance: 80 },
+  "Vortex": { weight: 2.2, attack: 45, defense: 10, stamina: 5, dash: 40, burstResistance: 80 },
+  //to update, data incomplete "Wedge": { weight: null, attack: 5, defense: 55, stamina: 30, dash: 10, burstResistance: 30 },
+  //to update, data incomplete "Zap": { weight: null, attack: 30, defense: 20, stamina: 15, dash: 35, burstResistance: 80 }
+};
+
+
+    const statList = ["attack", "defense", "stamina", "dash", "burstResistance", "weight", ];
+    const displayNames = {
+       attack: "Attack", defense: "Defense",
+      stamina: "Stamina", dash: "Dash", burstResistance: "Burst Resistance", weight: "Weight",
+    };
+
+    function populateSelect(id, options) {
+      const select = document.getElementById(id);
+      select.innerHTML = "";
+      const defaultOpt = document.createElement("option");
+      defaultOpt.disabled = true;
+      defaultOpt.selected = true;
+      if (id.includes("blade")) defaultOpt.textContent = "Select Blade";
+      else if (id.includes("ratchet")) defaultOpt.textContent = "Select Ratchet";
+      else defaultOpt.textContent = "Select Bit";
+      select.appendChild(defaultOpt);
+
+      for (const key in options) {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = key;
+        select.appendChild(opt);
+      }
+    }
+
+    populateSelect("blade1", blades);
+    populateSelect("ratchet1", ratchets);
+    populateSelect("bit1", bits);
+    populateSelect("blade2", blades);
+    populateSelect("ratchet2", ratchets);
+    populateSelect("bit2", bits);
+
+    function computeStats(blade, ratchet, bit) {
+      const total = {};
+      statList.forEach(stat => {
+        const b = blade?.[stat] ?? 0;
+        const r = ratchet?.[stat] ?? 0;
+        const bi = bit?.[stat] ?? 0;
+        const values = [b, r, bi].filter(val => val !== null);
+        total[stat] = values.length > 0 ? values.reduce((sum, val) => sum + val, 0).toFixed(1) : "no data";
+      });
+      return total;
+    }
+
+    function updateStats(builderNum) {
+      const blade = blades[document.getElementById(`blade${builderNum}`).value] || {};
+      const ratchet = ratchets[document.getElementById(`ratchet${builderNum}`).value] || {};
+      const bit = bits[document.getElementById(`bit${builderNum}`).value] || {};
+      const total = computeStats(blade, ratchet, bit);
+
+      const statsDiv = document.getElementById(`stats${builderNum}`);
+      statsDiv.innerHTML = "";
+      statList.forEach(stat => {
+        const label = document.createElement("div");
+        label.className = "stat-label";
+        if (stat === "burstResistance") {
+          label.classList.add("burst-resistance");
+        }
+        label.textContent = displayNames[stat];
+
+        const value = document.createElement("div");
+        value.className = "stat-value";
+        value.textContent = total[stat];
+
+        statsDiv.appendChild(label);
+        statsDiv.appendChild(value);
+      });
+
+      updateRadarChart();
+    }
+
+    let radarChart = null;
+
+    function updateRadarChart() {
+      const stat1 = computeStats(
+        blades[document.getElementById("blade1").value],
+        ratchets[document.getElementById("ratchet1").value],
+        bits[document.getElementById("bit1").value]
+      );
+
+      const stat2 = computeStats(
+        blades[document.getElementById("blade2").value],
+        ratchets[document.getElementById("ratchet2").value],
+        bits[document.getElementById("bit2").value]
+      );
+
+      const labels = statList.map(stat => displayNames[stat]);
+
+      const data = {
+        labels,
+        datasets: [
+          {
+            label: "Build 1",
+            data: statList.map(stat => stat1[stat] === "no data" ? 0 : parseFloat(stat1[stat])),
+            fill: true,
+            backgroundColor: "rgba(255, 0, 0, 0.2)",
+            borderColor: "rgba(255, 0, 0, 1)",
+            pointBorderColor: "rgba(255, 0, 0, 1)",
+            pointBackgroundColor: "#fff",
+            pointBorderWidth: 1,
+            pointRadius: 2,
+            lineTension: 0.1
+          },
+          {
+            label: "Build 2",
+            data: statList.map(stat => stat2[stat] === "no data" ? 0 : parseFloat(stat2[stat])),
+            fill: true,
+            backgroundColor: "rgba(0, 123, 255, 0.2)",
+            borderColor: "rgba(0, 123, 255, 1)",
+            pointBorderColor: "rgba(0, 123, 255, 1)",
+            pointBackgroundColor: "#fff",
+            pointBorderWidth: 1,
+            pointRadius: 2,
+            lineTension: 0.1
+          }
+        ]
+      };
+
+      const config = {
+        type: 'radar',
+        data,
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'top'
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.dataset.label}: ${ctx.formattedValue}`
+              }
+            }
+          },
+          scales: {
+            r: {
+              ticks: {
+                display: false
+              },
+              suggestedMin:0,
+              suggestedMax:140
+            }
+          }
+        }
+      };
+
+      if (radarChart) radarChart.destroy();
+      const ctx = document.getElementById('radarChart');
+      radarChart = new Chart(ctx, config);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      updateStats(1);
+      updateStats(2);
+    });
+  </script>
+</body>
+</html>
